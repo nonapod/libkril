@@ -81,10 +81,16 @@ void Krilya_Init_Key_Chain(Krilya_Key_Chain_Size key_chain_size, Krilya_Key_Chai
  */
 void Krilya_Free_Key_Chain(Krilya_Key_Chain *key_chain) 
 {
-	for (int row = 0; row < key_chain->size.rows; row++) {
-		free(key_chain->rows[row]);
+	if (key_chain->rows != NULL) {
+		for (int row = 0; row < key_chain->size.rows; row++) {
+			free(key_chain->rows[row]);
+		}
+		free(key_chain->rows);
 	}
-	free(key_chain->rows);
+	key_chain->ready = 0;
+	key_chain->rows = NULL;
+	key_chain->size.rows = 0;
+	key_chain->size.columns = 0;
 }
 
 /**
@@ -133,7 +139,10 @@ void Krilya_Load_Key_From_File(char *filename, Krilya_Key_Chain *key_chain) {
 
 		// Build a key chain size struct from the filesize.
 		key_chain_size = Krilya_Get_Key_Chain_Size(size);
-		if (!key_chain_size.columns || !key_chain_size.rows) return;
+		if (!key_chain_size.columns || !key_chain_size.rows) {
+			key_chain->ready = 0;
+			free(filep);
+		}
 
 		// Now loop all of the chars in the file and make sure they are within the
 		// bounds of max and min chars allowed.
@@ -144,7 +153,10 @@ void Krilya_Load_Key_From_File(char *filename, Krilya_Key_Chain *key_chain) {
 
 		// Initialize the keychain, then populate with characters.
 		Krilya_Init_Key_Chain(key_chain_size, key_chain);
-		if (!key_chain->ready) return;
+		if (!key_chain->ready) {
+			free(filep);
+			return;
+		};
 
 		for (int row = 0; row < key_chain->size.rows; row++) {
 			for (int column = 0; column < key_chain->size.columns; column++) {
@@ -153,6 +165,12 @@ void Krilya_Load_Key_From_File(char *filename, Krilya_Key_Chain *key_chain) {
 		}
 
 		fclose(filep);
+	}
+	else {
+		key_chain->ready = 0;
+		key_chain->size.columns = 0;
+		key_chain->size.rows = 0;
+		key_chain->rows = NULL;
 	}
 }
 
